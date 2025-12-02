@@ -35,3 +35,6 @@ storybook-static/
 test-results.xml
 
 docsite/
+
+# Zig cache directory
+.zig-cache/
