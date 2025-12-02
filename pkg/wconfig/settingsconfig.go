@@ -326,6 +326,22 @@ type ConnKeywords struct {
 	SshProxyJump                    []string `json:"ssh:proxyjump,omitempty"`
 	SshUserKnownHostsFile           []string `json:"ssh:userknownhostsfile,omitempty"`
 	SshGlobalKnownHostsFile         []string `json:"ssh:globalknownhostsfile,omitempty"`
+
+	// Port forwarding configuration
+	PortForwards []PortForwardEntry `json:"conn:portforwards,omitempty"`
+}
+
+// PortForwardEntry represents a single port forwarding rule
+type PortForwardEntry struct {
+	ID          string `json:"id"`                    // Unique identifier for this forward
+	Type        string `json:"type"`                  // "local", "remote", or "dynamic"
+	LocalHost   string `json:"localhost,omitempty"`   // Local host to bind to (default: localhost)
+	LocalPort   int    `json:"localport"`             // Local port number
+	RemoteHost  string `json:"remotehost,omitempty"`  // Remote host to forward to
+	RemotePort  int    `json:"remoteport,omitempty"`  // Remote port number
+	Description string `json:"description,omitempty"` // User-friendly description
+	AutoStart   bool   `json:"autostart,omitempty"`   // Start automatically when connection is established
+	Enabled     bool   `json:"enabled,omitempty"`     // Whether this forward is enabled
 }
 
 func DefaultBoolPtr(arg *bool, def bool) bool {
