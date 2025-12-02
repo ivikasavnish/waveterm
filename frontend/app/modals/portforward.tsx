@@ -42,6 +42,16 @@ export function PortForwardModal({ connName, onClose }: PortForwardModalProps) {
         persistent: false,
     });
 
+    const getErrorMessage = (err: unknown): string => {
+        if (err instanceof Error) {
+            return err.message;
+        }
+        if (typeof err === "string") {
+            return err;
+        }
+        return String(err);
+    };
+
     const loadForwards = React.useCallback(async () => {
         try {
             setIsLoading(true);
@@ -49,7 +59,7 @@ export function PortForwardModal({ connName, onClose }: PortForwardModalProps) {
             const result = await RpcApi.PortForwardListCommand(TabRpcClient, { connname: connName });
             setForwards(result || []);
         } catch (err) {
-            setError(err?.message || "Failed to load port forwards");
+            setError(getErrorMessage(err) || "Failed to load port forwards");
         } finally {
             setIsLoading(false);
         }
@@ -99,7 +109,7 @@ export function PortForwardModal({ connName, onClose }: PortForwardModalProps) {
             });
             await loadForwards();
         } catch (err) {
-            setError(err?.message || "Failed to add port forward");
+            setError(getErrorMessage(err) || "Failed to add port forward");
         }
     };
 
@@ -112,7 +122,7 @@ export function PortForwardModal({ connName, onClose }: PortForwardModalProps) {
             });
             await loadForwards();
         } catch (err) {
-            setError(err?.message || "Failed to stop port forward");
+            setError(getErrorMessage(err) || "Failed to stop port forward");
         }
     };
 

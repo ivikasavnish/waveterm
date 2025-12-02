@@ -332,25 +332,10 @@ func (pf *PortForward) startRemoteForward() error {
 }
 
 func (pf *PortForward) startDynamicForward() error {
-	localAddr := fmt.Sprintf("%s:%d", pf.Config.LocalHost, pf.Config.LocalPort)
-	if pf.Config.LocalHost == "" {
-		localAddr = fmt.Sprintf("localhost:%d", pf.Config.LocalPort)
-	}
-
-	listener, err := net.Listen("tcp", localAddr)
-	if err != nil {
-		return fmt.Errorf("failed to listen on %s: %w", localAddr, err)
-	}
-	pf.listener = listener
-
-	go func() {
-		defer func() {
-			panichandler.PanicHandler("portforward:dynamicForward", recover())
-		}()
-		pf.acceptLoopDynamic()
-	}()
-
-	return nil
+	// Note: Dynamic SOCKS5 proxy forwarding is not yet fully implemented.
+	// This placeholder accepts connections but doesn't handle SOCKS5 protocol.
+	// For now, return an error to inform users this feature is not available.
+	return fmt.Errorf("dynamic SOCKS5 proxy forwarding is not yet implemented; use local or remote forwarding instead")
 }
 
 func (pf *PortForward) acceptLoop() {
@@ -413,37 +398,6 @@ func (pf *PortForward) acceptLoopRemote() {
 	}
 }
 
-func (pf *PortForward) acceptLoopDynamic() {
-	// Dynamic SOCKS proxy - for now, just accept and forward through SSH
-	for {
-		select {
-		case <-pf.stopCh:
-			return
-		default:
-		}
-
-		conn, err := pf.listener.Accept()
-		if err != nil {
-			select {
-			case <-pf.stopCh:
-				return
-			default:
-				log.Printf("error accepting dynamic connection: %v", err)
-				continue
-			}
-		}
-
-		pf.connections.Add(1)
-		go func() {
-			defer func() {
-				panichandler.PanicHandler("portforward:handleDynamicConn", recover())
-				pf.connections.Add(-1)
-			}()
-			pf.handleDynamicConnection(conn)
-		}()
-	}
-}
-
 func (pf *PortForward) handleLocalConnection(localConn net.Conn) {
 	defer localConn.Close()
 
@@ -480,13 +434,6 @@ func (pf *PortForward) handleRemoteConnection(remoteConn net.Conn) {
 
 	pf.lastActivity.Store(time.Now().UnixMilli())
 	pf.copyBidirectional(localConn, remoteConn)
-}
-
-func (pf *PortForward) handleDynamicConnection(conn net.Conn) {
-	defer conn.Close()
-	// Simple SOCKS5-like proxy through SSH
-	// For now, just close the connection - full SOCKS5 implementation would be more complex
-	log.Printf("dynamic forwarding not fully implemented yet")
 }
 
 func (pf *PortForward) copyBidirectional(local, remote net.Conn) {
@@ -613,16 +560,39 @@ func (d *AutoForwardDetector) parseMatch(pattern *regexp.Regexp, match []string)
 	return nil
 }
 
-// StartAutoForwards starts port forwards that are configured to auto-start
-func (m *Manager) StartAutoForwards(ctx context.Context, connName string, configs []PortForwardConfig) error {
+// StartAutoForwards starts port forwards that are configured to auto-start.
+// It returns a slice of errors for any forwards that failed to start.
+// The function continues trying to start other forwards even if some fail.
+func (m *Manager) StartAutoForwards(ctx context.Context, connName string, configs []PortForwardConfig) []error {
+	var errors []error
 	for _, config := range configs {
 		if config.AutoStart && config.ConnectionKey == connName {
-			_, err := m.StartForward(config)
+			state, err := m.StartForward(config)
 			if err != nil {
 				log.Printf("failed to auto-start forward %s: %v", config.ID, err)
-				// Continue with other forwards
+				errors = append(errors, fmt.Errorf("forward %s: %w", config.ID, err))
+				// Fire an event so the UI can show the failure
+				m.fireAutoStartFailureEvent(connName, config, err)
+			} else if state != nil && state.Status == StatusError {
+				log.Printf("auto-start forward %s completed with error: %s", config.ID, state.Error)
+				errors = append(errors, fmt.Errorf("forward %s: %s", config.ID, state.Error))
 			}
 		}
 	}
-	return nil
+	return errors
+}
+
+func (m *Manager) fireAutoStartFailureEvent(connName string, config PortForwardConfig, err error) {
+	event := wps.WaveEvent{
+		Event: "portforward:autostart:error",
+		Scopes: []string{
+			fmt.Sprintf("connection:%s", connName),
+		},
+		Data: map[string]any{
+			"forwardid": config.ID,
+			"error":     err.Error(),
+			"config":    config,
+		},
+	}
+	wps.Broker.Publish(event)
 }

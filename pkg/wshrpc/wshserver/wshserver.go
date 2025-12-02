@@ -1454,7 +1454,11 @@ func (ws *WshServer) PortForwardStartCommand(ctx context.Context, data wshrpc.Po
 
 	// Generate ID if not provided
 	if data.ID == "" {
-		data.ID = fmt.Sprintf("%s:%d-%d", data.ConnName, data.LocalPort, data.RemotePort)
+		if data.Type == "dynamic" {
+			data.ID = fmt.Sprintf("%s:dynamic:%d", data.ConnName, data.LocalPort)
+		} else {
+			data.ID = fmt.Sprintf("%s:%d-%d", data.ConnName, data.LocalPort, data.RemotePort)
+		}
 	}
 
 	// Get the SSH connection
