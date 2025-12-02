@@ -10,9 +10,12 @@ BIN_DIR := bin
 DIST_DIR := dist
 MAKE_DIR := make
 
-# Go build flags
-GO_LDFLAGS := -X main.BuildTime=$(DATE) -X main.WaveVersion=$(VERSION)
+# Go build flags for wavesrv (CGO enabled)
 GO_BUILD_TAGS := osusergo,sqlite_omit_load_extension
+WAVESRV_LDFLAGS := -X main.BuildTime=$(DATE) -X main.WaveVersion=$(VERSION)
+
+# Go build flags for wsh (CGO disabled, stripped)
+WSH_LDFLAGS := -s -w -X main.BuildTime=$(DATE) -X main.WaveVersion=$(VERSION)
 
 # Default target
 .PHONY: all
@@ -42,7 +45,7 @@ help:
 	@echo "  dev               - Run development server"
 	@echo "  package           - Package application for current platform"
 	@echo "  clean             - Clean build artifacts"
-	@echo "  test              - Run tests"
+	@echo "  test              - Run frontend tests (npm)"
 	@echo ""
 	@echo "Current version: $(VERSION)"
 
@@ -116,7 +119,7 @@ build-mac-arm64: go-mod-tidy
 	@mkdir -p $(DIST_DIR)/bin
 	CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build \
 		-tags "$(GO_BUILD_TAGS)" \
-		-ldflags "$(GO_LDFLAGS)" \
+		-ldflags "$(WAVESRV_LDFLAGS)" \
 		-o $(DIST_DIR)/bin/wavesrv.arm64 \
 		cmd/server/main-server.go
 
@@ -125,7 +128,7 @@ build-wsh-mac-arm64: go-mod-tidy
 	@echo "Building wsh for Mac ARM64..."
 	@mkdir -p $(DIST_DIR)/bin
 	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build \
-		-ldflags="-s -w -X main.BuildTime=$(DATE) -X main.WaveVersion=$(VERSION)" \
+		-ldflags="$(WSH_LDFLAGS)" \
 		-o $(DIST_DIR)/bin/wsh-$(VERSION)-darwin.arm64 \
 		cmd/wsh/main-wsh.go
 
@@ -135,7 +138,7 @@ build-mac-amd64: go-mod-tidy
 	@mkdir -p $(DIST_DIR)/bin
 	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build \
 		-tags "$(GO_BUILD_TAGS)" \
-		-ldflags "$(GO_LDFLAGS)" \
+		-ldflags "$(WAVESRV_LDFLAGS)" \
 		-o $(DIST_DIR)/bin/wavesrv.x64 \
 		cmd/server/main-server.go
 
@@ -144,7 +147,7 @@ build-wsh-mac-amd64: go-mod-tidy
 	@echo "Building wsh for Mac AMD64..."
 	@mkdir -p $(DIST_DIR)/bin
 	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build \
-		-ldflags="-s -w -X main.BuildTime=$(DATE) -X main.WaveVersion=$(VERSION)" \
+		-ldflags="$(WSH_LDFLAGS)" \
 		-o $(DIST_DIR)/bin/wsh-$(VERSION)-darwin.x64 \
 		cmd/wsh/main-wsh.go
 
@@ -159,13 +162,13 @@ build-linux-amd64: go-mod-tidy
 ifeq ($(shell command -v zig 2> /dev/null),)
 	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build \
 		-tags "$(GO_BUILD_TAGS)" \
-		-ldflags "$(GO_LDFLAGS)" \
+		-ldflags "$(WAVESRV_LDFLAGS)" \
 		-o $(DIST_DIR)/bin/wavesrv.x64 \
 		cmd/server/main-server.go
 else
 	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC="zig cc -target x86_64-linux-gnu.2.28" go build \
 		-tags "$(GO_BUILD_TAGS)" \
-		-ldflags "$(GO_LDFLAGS)" \
+		-ldflags "$(WAVESRV_LDFLAGS)" \
 		-o $(DIST_DIR)/bin/wavesrv.x64 \
 		cmd/server/main-server.go
 endif
@@ -175,7 +178,7 @@ build-wsh-linux-amd64: go-mod-tidy
 	@echo "Building wsh for Linux AMD64..."
 	@mkdir -p $(DIST_DIR)/bin
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-		-ldflags="-s -w -X main.BuildTime=$(DATE) -X main.WaveVersion=$(VERSION)" \
+		-ldflags="$(WSH_LDFLAGS)" \
 		-o $(DIST_DIR)/bin/wsh-$(VERSION)-linux.x64 \
 		cmd/wsh/main-wsh.go
 
@@ -187,13 +190,13 @@ build-linux-arm64: go-mod-tidy
 ifeq ($(shell command -v zig 2> /dev/null),)
 	CGO_ENABLED=1 GOOS=linux GOARCH=arm64 go build \
 		-tags "$(GO_BUILD_TAGS)" \
-		-ldflags "$(GO_LDFLAGS)" \
+		-ldflags "$(WAVESRV_LDFLAGS)" \
 		-o $(DIST_DIR)/bin/wavesrv.arm64 \
 		cmd/server/main-server.go
 else
 	CGO_ENABLED=1 GOOS=linux GOARCH=arm64 CC="zig cc -target aarch64-linux-gnu.2.28" go build \
 		-tags "$(GO_BUILD_TAGS)" \
-		-ldflags "$(GO_LDFLAGS)" \
+		-ldflags "$(WAVESRV_LDFLAGS)" \
 		-o $(DIST_DIR)/bin/wavesrv.arm64 \
 		cmd/server/main-server.go
 endif
@@ -203,7 +206,7 @@ build-wsh-linux-arm64: go-mod-tidy
 	@echo "Building wsh for Linux ARM64..."
 	@mkdir -p $(DIST_DIR)/bin
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build \
-		-ldflags="-s -w -X main.BuildTime=$(DATE) -X main.WaveVersion=$(VERSION)" \
+		-ldflags="$(WSH_LDFLAGS)" \
 		-o $(DIST_DIR)/bin/wsh-$(VERSION)-linux.arm64 \
 		cmd/wsh/main-wsh.go
 
@@ -215,32 +218,32 @@ build-wsh-linux-arm64: go-mod-tidy
 build-wsh: go-mod-tidy generate
 	@echo "Building wsh for all platforms..."
 	@mkdir -p $(DIST_DIR)/bin
-	@rm -f $(DIST_DIR)/bin/wsh*
+	@rm -f $(DIST_DIR)/bin/wsh-*
 	# Darwin
 	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build \
-		-ldflags="-s -w -X main.BuildTime=$(DATE) -X main.WaveVersion=$(VERSION)" \
+		-ldflags="$(WSH_LDFLAGS)" \
 		-o $(DIST_DIR)/bin/wsh-$(VERSION)-darwin.arm64 \
 		cmd/wsh/main-wsh.go
 	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build \
-		-ldflags="-s -w -X main.BuildTime=$(DATE) -X main.WaveVersion=$(VERSION)" \
+		-ldflags="$(WSH_LDFLAGS)" \
 		-o $(DIST_DIR)/bin/wsh-$(VERSION)-darwin.x64 \
 		cmd/wsh/main-wsh.go
 	# Linux
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build \
-		-ldflags="-s -w -X main.BuildTime=$(DATE) -X main.WaveVersion=$(VERSION)" \
+		-ldflags="$(WSH_LDFLAGS)" \
 		-o $(DIST_DIR)/bin/wsh-$(VERSION)-linux.arm64 \
 		cmd/wsh/main-wsh.go
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-		-ldflags="-s -w -X main.BuildTime=$(DATE) -X main.WaveVersion=$(VERSION)" \
+		-ldflags="$(WSH_LDFLAGS)" \
 		-o $(DIST_DIR)/bin/wsh-$(VERSION)-linux.x64 \
 		cmd/wsh/main-wsh.go
 	# Windows
 	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build \
-		-ldflags="-s -w -X main.BuildTime=$(DATE) -X main.WaveVersion=$(VERSION)" \
+		-ldflags="$(WSH_LDFLAGS)" \
 		-o $(DIST_DIR)/bin/wsh-$(VERSION)-windows.x64.exe \
 		cmd/wsh/main-wsh.go
 	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build \
-		-ldflags="-s -w -X main.BuildTime=$(DATE) -X main.WaveVersion=$(VERSION)" \
+		-ldflags="$(WSH_LDFLAGS)" \
 		-o $(DIST_DIR)/bin/wsh-$(VERSION)-windows.arm64.exe \
 		cmd/wsh/main-wsh.go
 
@@ -291,8 +294,8 @@ build-tsunamiscaffold:
 	cd tsunami/frontend && npm run build
 	rm -rf $(DIST_DIR)/tsunamiscaffold
 	mkdir -p $(DIST_DIR)/tsunamiscaffold
-	cp -r tsunami/frontend/scaffold/* $(DIST_DIR)/tsunamiscaffold/ 2>/dev/null || true
-	cp -r tsunami/frontend/dist/* $(DIST_DIR)/tsunamiscaffold/ 2>/dev/null || true
+	@if [ -d tsunami/frontend/scaffold ]; then cp -r tsunami/frontend/scaffold/* $(DIST_DIR)/tsunamiscaffold/; fi
+	@if [ -d tsunami/frontend/dist ]; then cp -r tsunami/frontend/dist/* $(DIST_DIR)/tsunamiscaffold/; fi
 
 # ============================================================================
 # Testing
