@@ -617,6 +617,7 @@ declare global {
         "ssh:proxyjump"?: string[];
         "ssh:userknownhostsfile"?: string[];
         "ssh:globalknownhostsfile"?: string[];
+        "conn:portforwards"?: PortForwardEntry[];
     };
 
     // wshrpc.ConnRequest
@@ -972,6 +973,62 @@ declare global {
     type Point = {
         x: number;
         y: number;
+    };
+
+    // wconfig.PortForwardEntry
+    type PortForwardEntry = {
+        id: string;
+        type: string;
+        localhost?: string;
+        localport: number;
+        remotehost?: string;
+        remoteport?: number;
+        description?: string;
+        autostart?: boolean;
+        enabled?: boolean;
+    };
+
+    // wshrpc.PortForwardListRequest
+    type PortForwardListRequest = {
+        connname?: string;
+    };
+
+    // wshrpc.PortForwardRequest
+    type PortForwardRequest = {
+        connname: string;
+        id?: string;
+        type: string;
+        localhost?: string;
+        localport: number;
+        remotehost?: string;
+        remoteport?: number;
+        description?: string;
+        autostart?: boolean;
+        persistent?: boolean;
+    };
+
+    // wshrpc.PortForwardStatus
+    type PortForwardStatus = {
+        id: string;
+        type: string;
+        localhost?: string;
+        localport: number;
+        remotehost?: string;
+        remoteport?: number;
+        description?: string;
+        status: string;
+        error?: string;
+        bytessent: number;
+        bytesrecv: number;
+        connections: number;
+        starttime?: number;
+        lastactivity?: number;
+    };
+
+    // wshrpc.PortForwardStopRequest
+    type PortForwardStopRequest = {
+        connname: string;
+        forwardid: string;
     };
 
     // uctypes.RateLimitInfo

@@ -392,6 +392,21 @@ class RpcApiType {
         return client.wshRpcCall("path", data, opts);
     }
 
+    // command "portforwardlist" [call]
+    PortForwardListCommand(client: WshClient, data: PortForwardListRequest, opts?: RpcOpts): Promise<PortForwardStatus[]> {
+        return client.wshRpcCall("portforwardlist", data, opts);
+    }
+
+    // command "portforwardstart" [call]
+    PortForwardStartCommand(client: WshClient, data: PortForwardRequest, opts?: RpcOpts): Promise<PortForwardStatus> {
+        return client.wshRpcCall("portforwardstart", data, opts);
+    }
+
+    // command "portforwardstop" [call]
+    PortForwardStopCommand(client: WshClient, data: PortForwardStopRequest, opts?: RpcOpts): Promise<void> {
+        return client.wshRpcCall("portforwardstop", data, opts);
+    }
+
     // command "publishapp" [call]
     PublishAppCommand(client: WshClient, data: CommandPublishAppData, opts?: RpcOpts): Promise<CommandPublishAppRtnData> {
         return client.wshRpcCall("publishapp", data, opts);

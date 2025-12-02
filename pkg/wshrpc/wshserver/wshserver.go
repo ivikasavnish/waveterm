@@ -34,6 +34,7 @@ import (
 	"github.com/wavetermdev/waveterm/pkg/remote/awsconn"
 	"github.com/wavetermdev/waveterm/pkg/remote/conncontroller"
 	"github.com/wavetermdev/waveterm/pkg/remote/fileshare"
+	"github.com/wavetermdev/waveterm/pkg/remote/portforward"
 	"github.com/wavetermdev/waveterm/pkg/secretstore"
 	"github.com/wavetermdev/waveterm/pkg/suggestion"
 	"github.com/wavetermdev/waveterm/pkg/telemetry"
@@ -1433,4 +1434,134 @@ func (ws *WshServer) GetSecretsLinuxStorageBackendCommand(ctx context.Context) (
 		return "", fmt.Errorf("error getting linux storage backend: %w", err)
 	}
 	return backend, nil
+}
+
+// Port forwarding commands
+func (ws *WshServer) PortForwardStartCommand(ctx context.Context, data wshrpc.PortForwardRequest) (*wshrpc.PortForwardStatus, error) {
+	// Validate request
+	if data.ConnName == "" {
+		return nil, fmt.Errorf("connection name is required")
+	}
+	if data.LocalPort <= 0 {
+		return nil, fmt.Errorf("local port must be positive")
+	}
+	if data.Type == "" {
+		data.Type = "local"
+	}
+	if data.Type != "local" && data.Type != "remote" && data.Type != "dynamic" {
+		return nil, fmt.Errorf("invalid forward type: %s, must be 'local', 'remote', or 'dynamic'", data.Type)
+	}
+
+	// Generate ID if not provided
+	if data.ID == "" {
+		if data.Type == "dynamic" {
+			data.ID = fmt.Sprintf("%s:dynamic:%d", data.ConnName, data.LocalPort)
+		} else {
+			data.ID = fmt.Sprintf("%s:%d-%d", data.ConnName, data.LocalPort, data.RemotePort)
+		}
+	}
+
+	// Get the SSH connection
+	connOpts, err := remote.ParseOpts(data.ConnName)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing connection name: %w", err)
+	}
+	conn := conncontroller.GetConn(connOpts)
+	if conn == nil {
+		return nil, fmt.Errorf("connection not found: %s", data.ConnName)
+	}
+
+	connStatus := conn.DeriveConnStatus()
+	if connStatus.Status != conncontroller.Status_Connected {
+		return nil, fmt.Errorf("connection %s is not connected, cannot start port forward", data.ConnName)
+	}
+
+	client := conn.GetClient()
+	if client == nil {
+		return nil, fmt.Errorf("SSH client not available for connection: %s", data.ConnName)
+	}
+
+	// Register client with port forward manager
+	pfManager := portforward.GetManager()
+	pfManager.RegisterClient(data.ConnName, client)
+
+	// Create port forward config
+	config := portforward.PortForwardConfig{
+		ID:            data.ID,
+		Type:          portforward.ForwardType(data.Type),
+		LocalHost:     data.LocalHost,
+		LocalPort:     data.LocalPort,
+		RemoteHost:    data.RemoteHost,
+		RemotePort:    data.RemotePort,
+		Description:   data.Description,
+		AutoStart:     data.AutoStart,
+		Persistent:    data.Persistent,
+		ConnectionKey: data.ConnName,
+	}
+
+	// Start the forward
+	state, err := pfManager.StartForward(config)
+	if err != nil {
+		return nil, fmt.Errorf("error starting port forward: %w", err)
+	}
+
+	// Convert to wshrpc type
+	return &wshrpc.PortForwardStatus{
+		ID:           state.Config.ID,
+		Type:         string(state.Config.Type),
+		LocalHost:    state.Config.LocalHost,
+		LocalPort:    state.Config.LocalPort,
+		RemoteHost:   state.Config.RemoteHost,
+		RemotePort:   state.Config.RemotePort,
+		Description:  state.Config.Description,
+		Status:       string(state.Status),
+		Error:        state.Error,
+		BytesSent:    state.BytesSent,
+		BytesRecv:    state.BytesRecv,
+		Connections:  state.Connections,
+		StartTime:    state.StartTime,
+		LastActivity: state.LastActivity,
+	}, nil
+}
+
+func (ws *WshServer) PortForwardStopCommand(ctx context.Context, data wshrpc.PortForwardStopRequest) error {
+	if data.ForwardID == "" {
+		return fmt.Errorf("forward ID is required")
+	}
+
+	pfManager := portforward.GetManager()
+	return pfManager.StopForward(data.ForwardID)
+}
+
+func (ws *WshServer) PortForwardListCommand(ctx context.Context, data wshrpc.PortForwardListRequest) ([]wshrpc.PortForwardStatus, error) {
+	pfManager := portforward.GetManager()
+
+	var states []*portforward.PortForwardState
+	if data.ConnName == "" {
+		states = pfManager.GetAllForwards()
+	} else {
+		states = pfManager.GetForwardsByConnection(data.ConnName)
+	}
+
+	var result []wshrpc.PortForwardStatus
+	for _, state := range states {
+		result = append(result, wshrpc.PortForwardStatus{
+			ID:           state.Config.ID,
+			Type:         string(state.Config.Type),
+			LocalHost:    state.Config.LocalHost,
+			LocalPort:    state.Config.LocalPort,
+			RemoteHost:   state.Config.RemoteHost,
+			RemotePort:   state.Config.RemotePort,
+			Description:  state.Config.Description,
+			Status:       string(state.Status),
+			Error:        state.Error,
+			BytesSent:    state.BytesSent,
+			BytesRecv:    state.BytesRecv,
+			Connections:  state.Connections,
+			StartTime:    state.StartTime,
+			LastActivity: state.LastActivity,
+		})
+	}
+
+	return result, nil
 }

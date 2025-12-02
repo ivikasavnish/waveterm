@@ -129,6 +129,11 @@ const (
 	Command_DismissWshFail   = "dismisswshfail"
 	Command_ConnUpdateWsh    = "updatewsh"
 
+	// Port forwarding commands
+	Command_PortForwardStart = "portforwardstart"
+	Command_PortForwardStop  = "portforwardstop"
+	Command_PortForwardList  = "portforwardlist"
+
 	Command_WorkspaceList = "workspacelist"
 
 	Command_WebSelector      = "webselector"
@@ -272,6 +277,11 @@ type WshRpcInterface interface {
 	WslDefaultDistroCommand(ctx context.Context) (string, error)
 	DismissWshFailCommand(ctx context.Context, connName string) error
 	ConnUpdateWshCommand(ctx context.Context, remoteInfo RemoteInfo) (bool, error)
+
+	// port forwarding functions
+	PortForwardStartCommand(ctx context.Context, data PortForwardRequest) (*PortForwardStatus, error)
+	PortForwardStopCommand(ctx context.Context, data PortForwardStopRequest) error
+	PortForwardListCommand(ctx context.Context, data PortForwardListRequest) ([]PortForwardStatus, error)
 
 	// eventrecv is special, it's handled internally by WshRpc with EventListener
 	EventRecvCommand(ctx context.Context, data wps.WaveEvent) error
@@ -733,6 +743,46 @@ type ConnStatus struct {
 	WshError      string `json:"wsherror,omitempty"`
 	NoWshReason   string `json:"nowshreason,omitempty"`
 	WshVersion    string `json:"wshversion,omitempty"`
+}
+
+// Port forwarding types
+type PortForwardRequest struct {
+	ConnName    string `json:"connname"`
+	ID          string `json:"id,omitempty"`          // Unique identifier for this forward
+	Type        string `json:"type"`                  // "local", "remote", or "dynamic"
+	LocalHost   string `json:"localhost,omitempty"`   // Local host to bind to (default: localhost)
+	LocalPort   int    `json:"localport"`             // Local port number
+	RemoteHost  string `json:"remotehost,omitempty"`  // Remote host to forward to
+	RemotePort  int    `json:"remoteport,omitempty"`  // Remote port number
+	Description string `json:"description,omitempty"` // User-friendly description
+	AutoStart   bool   `json:"autostart,omitempty"`   // Start automatically when connection is established
+	Persistent  bool   `json:"persistent,omitempty"`  // Persist this forward across sessions
+}
+
+type PortForwardStatus struct {
+	ID           string `json:"id"`
+	Type         string `json:"type"`
+	LocalHost    string `json:"localhost,omitempty"`
+	LocalPort    int    `json:"localport"`
+	RemoteHost   string `json:"remotehost,omitempty"`
+	RemotePort   int    `json:"remoteport,omitempty"`
+	Description  string `json:"description,omitempty"`
+	Status       string `json:"status"` // "active", "connecting", "disconnected", "error"
+	Error        string `json:"error,omitempty"`
+	BytesSent    int64  `json:"bytessent"`
+	BytesRecv    int64  `json:"bytesrecv"`
+	Connections  int32  `json:"connections"`
+	StartTime    int64  `json:"starttime,omitempty"`
+	LastActivity int64  `json:"lastactivity,omitempty"`
+}
+
+type PortForwardStopRequest struct {
+	ConnName  string `json:"connname"`
+	ForwardID string `json:"forwardid"`
+}
+
+type PortForwardListRequest struct {
+	ConnName string `json:"connname,omitempty"` // If empty, returns all forwards
 }
 
 type WebSelectorOpts struct {

@@ -1,0 +1,230 @@
+// Copyright 2025, Command Line Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+.port-forward-modal {
+    width: 500px;
+    max-width: 90vw;
+    max-height: 80vh;
+    overflow: hidden;
+
+    .port-forward-modal-content {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 20px;
+        overflow-y: auto;
+        max-height: calc(80vh - 80px);
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0;
+            color: var(--main-text-color);
+        }
+
+        .modal-subtitle {
+            font-size: 14px;
+            color: var(--secondary-text-color);
+            margin: 0;
+        }
+
+        .error-message {
+            background: var(--error-color-transparent);
+            border: 1px solid var(--error-color);
+            border-radius: 4px;
+            padding: 8px 12px;
+            color: var(--error-color);
+            font-size: 13px;
+        }
+
+        .actions-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .add-form {
+            background: var(--block-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+
+            h3 {
+                font-size: 16px;
+                font-weight: 500;
+                margin: 0;
+                color: var(--main-text-color);
+            }
+
+            .form-row {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+
+                &.checkbox {
+                    flex-direction: row;
+                    align-items: center;
+                    gap: 8px;
+
+                    label {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        cursor: pointer;
+                    }
+
+                    input[type="checkbox"] {
+                        width: 16px;
+                        height: 16px;
+                        cursor: pointer;
+                    }
+                }
+
+                label {
+                    font-size: 13px;
+                    font-weight: 500;
+                    color: var(--secondary-text-color);
+                }
+
+                input,
+                select {
+                    padding: 8px 12px;
+                    border: 1px solid var(--border-color);
+                    border-radius: 4px;
+                    background: var(--panel-bg-color);
+                    color: var(--main-text-color);
+                    font-size: 14px;
+
+                    &:focus {
+                        outline: none;
+                        border-color: var(--accent-color);
+                    }
+
+                    &::placeholder {
+                        color: var(--secondary-text-color);
+                        opacity: 0.6;
+                    }
+                }
+
+                select {
+                    cursor: pointer;
+                }
+            }
+
+            .form-actions {
+                display: flex;
+                gap: 8px;
+                justify-content: flex-end;
+                margin-top: 8px;
+            }
+        }
+
+        .forwards-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+
+            .loading,
+            .empty-state {
+                text-align: center;
+                padding: 24px;
+                color: var(--secondary-text-color);
+                font-size: 14px;
+            }
+
+            .forward-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                padding: 12px;
+                background: var(--block-bg-color);
+                border: 1px solid var(--border-color);
+                border-radius: 6px;
+                gap: 12px;
+
+                .forward-info {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                    flex: 1;
+                    min-width: 0;
+
+                    .forward-description {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        font-size: 14px;
+                        color: var(--main-text-color);
+
+                        .status-indicator {
+                            font-size: 10px;
+
+                            &.text-success {
+                                color: var(--success-color);
+                            }
+                            &.text-warning {
+                                color: var(--warning-color);
+                            }
+                            &.text-error {
+                                color: var(--error-color);
+                            }
+                            &.text-muted {
+                                color: var(--secondary-text-color);
+                            }
+                        }
+
+                        .forward-type {
+                            font-family: var(--termfontfamily);
+                            font-size: 11px;
+                            color: var(--accent-color);
+                            text-transform: uppercase;
+                        }
+
+                        .forward-mapping {
+                            font-family: var(--termfontfamily);
+                            font-size: 13px;
+                        }
+                    }
+
+                    .forward-note {
+                        font-size: 12px;
+                        color: var(--secondary-text-color);
+                        margin-left: 18px;
+                    }
+
+                    .forward-stats {
+                        display: flex;
+                        gap: 16px;
+                        font-size: 11px;
+                        color: var(--secondary-text-color);
+                        margin-left: 18px;
+                    }
+                }
+
+                .forward-actions {
+                    display: flex;
+                    gap: 4px;
+                    align-items: center;
+
+                    button {
+                        &.danger {
+                            color: var(--error-color);
+                            
+                            &:hover {
+                                background: var(--error-color-transparent);
+                            }
+                        }
+
+                        &.small {
+                            padding: 4px 8px;
+                            font-size: 12px;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
